@@ -1,40 +1,72 @@
-﻿body
-{
+﻿body {
     background-color: black;
     color: white;
+    
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0;
+    width: 600px;
 }
+h2 {
+    padding-bottom: 20px;
+}
+
 .resultsbutton {    
     height:  20px;
     width:  20px;
     border-radius: 100%;
     background-color: grey; 
 }
-li {
-    padding: 0;
-}
-.colorpickerlist {
+.colorpickersection {
     padding: 0; 
-    border-radius: 100%;    
-    width: 100px; 
-    height: 400px;
+    width: 100px;     
     float: left;
     display: block; 
+    border: 2px solid white;    
 }
+.colorpickersection p {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.colorpickerlist {
+    list-style-type: none;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 10px;
+}
+
 .colorpicker {
     border-radius: 100%;
     height: 80px;
     width: 80px;    
-    padding: 0;
+    padding-left: 0px;
+    margin-left: auto;
+    margin-right: auto;
 }
+
+.guessArea {
+    margin-left: 120px;
+}
+
+#submittedGuess {
+    margin-bottom: 20px;
+}
+
+#resultsLabel {
+    margin-left: 20px;
+}
+
 .guesses {    
-    z-index: 15;
-    float: left; 
+    z-index: 15;    
     width: 650px;
-    /*height: 400px;*/
-    background-color: blue; 
+    /*height: 400px;*/        
     display: block;
-    padding: 0;
+    /*padding: 0;*/
     list-style-type: none;
+}
+.guesses tr {
+    padding-left: 120px;
 }
 .guess {
     border-radius: 100%;
@@ -43,6 +75,7 @@ li {
     padding: 0;
     background-color: gray;
 }
+
 .redbutton {
     color: red;
     background-color: red;

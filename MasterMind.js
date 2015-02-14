@@ -15,6 +15,8 @@ $(document).ready(function () {
         }
     }
 
+    $('#resultsLabel').hide();
+
     // displays the answer. 
     // comment out this line of code when done testing!
     //$('#answers').html(getAnswerMarkup()); 
@@ -75,7 +77,9 @@ $(document).ready(function () {
         var submittedAnswerSet = [];
         var results = [];
 
-		guessCount++;
+        $('#resultsLabel').show();
+
+        guessCount++;
 
         // accept guess input and built HTML to add to guess list table.
         guessItem += "<tr>";
@@ -160,4 +164,7 @@ $(document).ready(function () {
             $('#answers').empty();
         }
     });
+
+    
+
 });
