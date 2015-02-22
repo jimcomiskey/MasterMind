@@ -1,25 +1,62 @@
-// JavaScript source code
+/// <reference path="/Scripts/jquery-2.1.0-vsdoc.js">
+function SubmittedGuess(answers, results, possibleAnswerCount) {
+    this.answers = answers;
+    this.results = results;
+    this.possibleAnswerCount = possibleAnswerCount;
+}
+
+
 $(document).ready(function () {
     var lastpicked;
     var guessCount = 0;
     var colorlist = ['red', 'blue', 'yellow', 'green', 'orange', 'purple'];
+    var actualAnswer = [];
 
-    //var answers = ['red', 'blue', 'yellow', 'green'];
-    // randomly initialize answer key
-    var answers = [];
+    var guessHistory = [];
 
-    while (answers.length < 4) {
-        var color = colorlist[Math.floor(Math.random() * colorlist.length)];
-        if (answers.indexOf(color) == -1) {
-            answers.push(color);
+    var showAnswer = false;
+
+    function initializeGame() {
+        $('.guessArea').hide();
+        $('#submitGuess').hide();
+        $('#submitCode').hide();
+        
+        $('#resultsLabel').hide();
+        $('#guesshistory').html("");
+
+        actualAnswer = [];
+        guessHistory = [];
+        guessCount = 0;
+        resetGuess();
+
+        if ($('#codeBreaker')[0].checked) {
+            initializeCodebreakerGame();
+        } else if ($('#codeMaker')[0].checked) {
+            initializeCodemakerGame();
         }
     }
+    function initializeCodebreakerGame() {
 
-    $('#resultsLabel').hide();
+        // randomly initialize answer key    
 
-    // displays the answer. 
-    // comment out this line of code when done testing!
-    //$('#answers').html(getAnswerMarkup()); 
+        while (actualAnswer.length < 4) {
+            var color = colorlist[Math.floor(Math.random() * colorlist.length)];
+            if (actualAnswer.indexOf(color) == -1) {
+                actualAnswer.push(color);
+            }
+        }        
+        
+        $('.guessArea').show();
+        $('#submitGuess').show();
+
+        if (showAnswer) {
+            $('#answers').html(getActualAnswerMarkup());
+        }
+    }
+    function initializeCodemakerGame() {
+        $('.guessArea').show();        
+        $('#submitCode').show();
+    }
 
     function getButtonColor(button) {
         var colorclassname = "";
@@ -31,12 +68,12 @@ $(document).ready(function () {
         }
         return colorclassname;
     }
-    function getAnswerMarkup() {
+    function getActualAnswerMarkup() {
         var answerMarkup = "<tr>";
 
-        for (var i = 0; i < answers.length; i++) {
+        for (var i = 0; i < actualAnswer.length; i++) {
             answerMarkup += "<td>";
-            answerMarkup += "<button class='guess colorpicker " + answers[i] + "button'></button>";
+            answerMarkup += "<button class='guess colorpicker " + actualAnswer[i] + "button'></button>";
             answerMarkup += "</td>";
         }
 
@@ -75,45 +112,17 @@ $(document).ready(function () {
         var guessItem = "";
         var buttonClassName = "";
         var submittedAnswerSet = [];
-        var results = [];
-
+        
         $('#resultsLabel').show();
 
-        guessCount++;
-
-        // accept guess input and built HTML to add to guess list table.
-        guessItem += "<tr>";
+        // accept guess input and built HTML to add to guess list table.        
         for (var i = 0; i < 4; i++) {
             var findGuess = '#submittedGuess tr:nth-child(1) td:nth-child(' + (i + 1) + ') button';
             submittedAnswerSet[i] = getButtonColor($(findGuess));
-
-            buttonClassName = 'colorpicker guess ' +
-                getButtonColor($(findGuess)) + 'button';
-            guessItem += '<td><button class="' +
-                buttonClassName +
-                '"></button></td>';            
         }
-		
-		// analyze submitted answer and determine results.
-        for (var i = 0; i < answers.length; i++) {
-            var resultcode = 0;
-            for (var j = 0; j < submittedAnswerSet.length; j++) {
-                if (answers[i] == submittedAnswerSet[j]) {					
-                    if (i == j) {
-                        // position and color match found. 						
-                        resultcode = Math.max(2, resultcode);
-                    }
-                    else {
-                        // color correct, but position is not
-                        resultcode = Math.max(1, resultcode);
-                    }
-                }
-            }			
-            results.push(resultcode);
-        }
-        results.sort();
-		results.reverse();
 
+        var results = submitGuess(submittedAnswerSet, actualAnswer);
+        
         var correct = true;
         for (var i = 0; i < results.length; i++) {
             if (results[i] != 2) {
@@ -121,7 +130,7 @@ $(document).ready(function () {
                 break;
             }
         }
-        if (results.length < 4) {
+        if (results.length < answers.length) {
             correct = false;
         }
 
@@ -134,29 +143,219 @@ $(document).ready(function () {
             }
         }
         else {
-			resetGuess();
-            // display the results of the guess.
-            guessItem += '<td><table><tr>' +
-                    '<td><button class="resultsbutton' + getResultsButton(results[0]) + '"></button></td>' +
-                    '<td><button class="resultsbutton' + getResultsButton(results[1]) + '"></button></td>' +
-                    '</tr><tr>' +
-                    '<td><button class="resultsbutton' + getResultsButton(results[2]) + '"></button></td>' +
-                    '<td><button class="resultsbutton' + getResultsButton(results[3]) + '"></button></td>' +
-                    '</tr>' +
-                    '</table></td>';
+            
+            guessHistory.push(new SubmittedGuess(submittedAnswerSet, results, -1));
 
-            guessItem += "</tr>";
-
-            $('#guesshistory').prepend(guessItem);
+            drawGuessHistory();
+            
+			resetGuess();            
         }
 
     });
-	
-	
+
+    $('#submitCode').click(function () {
+        for (var i = 0; i < 4; i++) {
+            var findGuess = '#submittedGuess tr:nth-child(1) td:nth-child(' + (i + 1) + ') button';
+            actualAnswer[i] = getButtonColor($(findGuess));
+        }
+
+        if (!answerIsValid(actualAnswer)) {
+            alert("Invalid code. Code must have all slots populated with colors, and all colors must be unique.");
+            return;
+        }
+
+        // initialize list of possible answers- any unique combination of colors. 
+        var possibleGuesses = [];
+        var workingAnswer = [];
+        getCombinations(possibleGuesses, workingAnswer);
+
+        var correct = false;
+
+        // pick a possible guess
+        workingAnswer = possibleGuesses[0];
+
+        // submit answer and get results. 
+        var workingAnswerResults = submitGuess(workingAnswer, actualAnswer);
+
+        correct = areResultsCorrect(workingAnswerResults);
+        guessHistory.push(new SubmittedGuess(workingAnswer, workingAnswerResults, possibleGuesses.length));
+
+        drawGuessHistory();
+
+        while (!correct) {
+        
+            // for each possible guess
+            //     check each guess history.
+            //         if historical guess would not expected result against that answer, then eliminate it as a possibility.
+
+            for (var possibleGuessIndex = possibleGuesses.length - 1; possibleGuessIndex >= 0; possibleGuessIndex--) {
+                workingAnswer = possibleGuesses[possibleGuessIndex];
+                for (var guessHistoryIndex = 0; guessHistoryIndex < guessHistory.length; guessHistoryIndex++) {
+                    workingAnswerResults = submitGuess(guessHistory[guessHistoryIndex].answers, workingAnswer);
+                    if (resultsMatch(workingAnswerResults, guessHistory[guessHistoryIndex].results) === false) {
+                        possibleGuesses.splice(possibleGuessIndex, 1);
+                    } else {
+                        // debugger
+                    }
+                }
+            }
+
+            // submit new valid guess.
+            workingAnswer = possibleGuesses[0];
+            workingAnswerResults = submitGuess(workingAnswer, actualAnswer);
+            guessHistory.push(new SubmittedGuess(workingAnswer, workingAnswerResults, possibleGuesses.length));
+            drawGuessHistory();
+
+            correct = areResultsCorrect(workingAnswerResults);
+
+        }
+
+        alert("Puzzle solved in " + guessHistory.length + " guesses");
+    });
+
+    function answerIsValid(answer) {
+        for (var i = 0; i < answer.length; i++) {
+            if (!!answer[i] === false) {
+                return false;
+            }
+            for (var j = 0; j < i; j++) {
+                if (answer[i] === answer[j]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    function resultsMatch(results1, results2) {
+        if (results1.length === results2.length) {
+            for (var i = 0; i < results1.length; i++) {
+                if (results1[i] !== results2[i]) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function areResultsCorrect(results) {
+        var isCorrect = true;
+        for (var i = 0; i < results.length; i++) {
+            if (results[i] != 2) {
+                isCorrect = false;
+                break;
+            }
+        }
+        if (results.length < actualAnswer.length) {
+            isCorrect = false;
+        }
+
+        return isCorrect;
+    }
+
+    function getCombinations(possibleGuesses, answer) {
+        var workingAnswer = [];
+        var colorAlreadyUsed;
+        for (var colorIndex = 0; colorIndex < colorlist.length; colorIndex++) {
+            selectedColor = colorlist[colorIndex];
+
+            colorAlreadyUsed = false;
+            for (var existingChoiceIndex = 0; existingChoiceIndex < answer.length; existingChoiceIndex++) {
+                if (answer[existingChoiceIndex] === selectedColor) {
+                    colorAlreadyUsed = true;
+                }
+            }
+
+            if (!colorAlreadyUsed) {
+                answer.push(selectedColor);
+                if (answer.length === 4) {
+                    workingAnswer = [];
+                    for (answerPart in answer) {
+                        workingAnswer.push(answer[answerPart]);
+                    }
+                    possibleGuesses.push(workingAnswer);
+                    answer.pop();
+                } else {
+                    getCombinations(possibleGuesses, answer);
+                }
+            }
+        }
+        answer.pop();
+    }
+
+    function submitGuess(guess, answer) {
+        var results = [];
+        guessCount++;
+
+        // analyze submitted answer and determine results.
+        for (var i = 0; i < answer.length; i++) {
+            var resultcode = 0;
+            for (var j = 0; j < guess.length; j++) {
+                if (answer[i] == guess[j]) {
+                    if (i == j) {
+                        // position and color match found. 						
+                        resultcode = Math.max(2, resultcode);
+                    }
+                    else {
+                        // color correct, but position is not
+                        resultcode = Math.max(1, resultcode);
+                    }
+                }
+            }
+            results.push(resultcode);
+        }
+
+        // organize the position/color matches first, then the color matches
+        results.sort();
+        results.reverse(); // 2 = position/color match, 1 = color match only
+
+        return results;
+    }
+
+    function drawGuessHistory() {
+        
+        var guessItem = "";
+        // draw from most recent to least recent
+        for (var guess = guessHistory.length-1; guess >= 0; guess--) {
+            guessItem += "<tr>";
+
+            for (var iAnswerIndex = 0; iAnswerIndex < guessHistory[guess].answers.length; iAnswerIndex++) {
+                buttonClassName = 'colorpicker guess ' + guessHistory[guess].answers[iAnswerIndex] + 'button';
+
+                guessItem += '<td><button class="' +
+                    buttonClassName +
+                    '"></button></td>';
+            }
+
+            // display the results of the guess.
+            guessItem += '<td><table><tr>' +
+                    '<td><button class="resultsbutton' + getResultsButton(guessHistory[guess].results[0]) + '"></button></td>' +
+                    '<td><button class="resultsbutton' + getResultsButton(guessHistory[guess].results[1]) + '"></button></td>' +
+                    '</tr><tr>' +
+                    '<td><button class="resultsbutton' + getResultsButton(guessHistory[guess].results[2]) + '"></button></td>' +
+                    '<td><button class="resultsbutton' + getResultsButton(guessHistory[guess].results[3]) + '"></button></td>' +
+                    '</tr>' +
+                    '</table></td>';
+
+            if (guessHistory[guess].possibleAnswerCount >= 0) {
+                guessItem += '<td>Possible guesses: ' + guessHistory[guess].possibleAnswerCount + '</td>';
+            }
+
+            guessItem += "</tr>";
+        }
+
+        $('#guesshistory').html(guessItem);
+    }
+    
+    $('#resetGame').click(function () {
+        initializeGame();
+    });
 
     $('#showAnswer').click(function () {
         if ($(this).text() == "Show Answer") {
-            $('#answers').html(getAnswerMarkup());
+            $('#answers').html(getActualAnswerMarkup());
             $(this).text("Hide Answer");
         }
         else {
@@ -165,6 +364,12 @@ $(document).ready(function () {
         }
     });
 
+    $('#submitGuess').hide();
     
+    $('.guessArea').hide();
+    
+    $('input[name=gameMode]:radio').change(function () {
+        initializeGame();
+    });
 
 });
