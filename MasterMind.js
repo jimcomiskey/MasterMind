@@ -123,16 +123,7 @@ $(document).ready(function () {
 
         var results = submitGuess(submittedAnswerSet, actualAnswer);
         
-        var correct = true;
-        for (var i = 0; i < results.length; i++) {
-            if (results[i] != 2) {
-                correct = false;
-                break;
-            }
-        }
-        if (results.length < answers.length) {
-            correct = false;
-        }
+        var correct = areResultsCorrect(results);
 
         if (correct) {
             if (guessCount <= 1) {
@@ -172,7 +163,7 @@ $(document).ready(function () {
         var correct = false;
 
         // pick a possible guess
-        workingAnswer = possibleGuesses[0];
+        workingAnswer = possibleGuesses[Math.floor(Math.random() * possibleGuesses.length)];
 
         // submit answer and get results. 
         var workingAnswerResults = submitGuess(workingAnswer, actualAnswer);
@@ -194,14 +185,12 @@ $(document).ready(function () {
                     workingAnswerResults = submitGuess(guessHistory[guessHistoryIndex].answers, workingAnswer);
                     if (resultsMatch(workingAnswerResults, guessHistory[guessHistoryIndex].results) === false) {
                         possibleGuesses.splice(possibleGuessIndex, 1);
-                    } else {
-                        // debugger
                     }
                 }
             }
 
             // submit new valid guess.
-            workingAnswer = possibleGuesses[0];
+            workingAnswer = possibleGuesses[Math.floor(Math.random() * possibleGuesses.length)];
             workingAnswerResults = submitGuess(workingAnswer, actualAnswer);
             guessHistory.push(new SubmittedGuess(workingAnswer, workingAnswerResults, possibleGuesses.length));
             drawGuessHistory();
@@ -257,18 +246,10 @@ $(document).ready(function () {
 
     function getCombinations(possibleGuesses, answer) {
         var workingAnswer = [];
-        var colorAlreadyUsed;
         for (var colorIndex = 0; colorIndex < colorlist.length; colorIndex++) {
             selectedColor = colorlist[colorIndex];
-
-            colorAlreadyUsed = false;
-            for (var existingChoiceIndex = 0; existingChoiceIndex < answer.length; existingChoiceIndex++) {
-                if (answer[existingChoiceIndex] === selectedColor) {
-                    colorAlreadyUsed = true;
-                }
-            }
-
-            if (!colorAlreadyUsed) {
+            
+            if (answer.indexOf(selectedColor) === -1) { 
                 answer.push(selectedColor);
                 if (answer.length === 4) {
                     workingAnswer = [];
