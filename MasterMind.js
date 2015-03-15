@@ -21,6 +21,7 @@ $(document).ready(function () {
         $('#submitGuess').hide();
         $('#submitCode').hide();
         
+        
         $('#resultsLabel').hide();
         $('#guesshistory').html("");
 
@@ -46,6 +47,7 @@ $(document).ready(function () {
             }
         }        
         
+        $('.duplicateSetting').hide();
         $('.guessArea').show();
         $('#submitGuess').show();
 
@@ -54,6 +56,7 @@ $(document).ready(function () {
         }
     }
     function initializeCodemakerGame() {
+        $('.duplicateSetting').show();
         $('.guessArea').show();        
         $('#submitCode').show();
     }
@@ -150,15 +153,22 @@ $(document).ready(function () {
             actualAnswer[i] = getButtonColor($(findGuess));
         }
 
-        if (!answerIsValid(actualAnswer)) {
-            alert("Invalid code. Code must have all slots populated with colors, and all colors must be unique.");
+        var allowDuplicates = !($('#duplicatesOff')[0].checked);
+
+        if (!answerIsValid(actualAnswer, allowDuplicates)) {
+            if (allowDuplicates) {
+                alert("Invalid code. Code must have all slots populated with colors.");
+            }
+            else {
+                alert("Invalid code. Code must have all slots populated with colors, and all colors must be unique.");
+            }
             return;
         }
 
         // initialize list of possible answers- any unique combination of colors. 
         var possibleGuesses = [];
         var workingAnswer = [];
-        getCombinations(possibleGuesses, workingAnswer);
+        getCombinations(possibleGuesses, workingAnswer, allowDuplicates);
 
         var correct = false;
 
@@ -202,14 +212,16 @@ $(document).ready(function () {
         alert("Puzzle solved in " + guessHistory.length + " guesses");
     });
 
-    function answerIsValid(answer) {
+    function answerIsValid(answer, allowDuplicates) {
         for (var i = 0; i < answer.length; i++) {
             if (!!answer[i] === false) {
                 return false;
             }
-            for (var j = 0; j < i; j++) {
-                if (answer[i] === answer[j]) {
-                    return false;
+            if (!allowDuplicates) {
+                for (var j = 0; j < i; j++) {
+                    if (answer[i] === answer[j]) {
+                        return false;
+                    }
                 }
             }
         }
@@ -244,12 +256,12 @@ $(document).ready(function () {
         return isCorrect;
     }
 
-    function getCombinations(possibleGuesses, answer) {
+    function getCombinations(possibleGuesses, answer, allowDuplicates) {
         var workingAnswer = [];
         for (var colorIndex = 0; colorIndex < colorlist.length; colorIndex++) {
             selectedColor = colorlist[colorIndex];
             
-            if (answer.indexOf(selectedColor) === -1) { 
+            if (answer.indexOf(selectedColor) === -1 || allowDuplicates) { 
                 answer.push(selectedColor);
                 if (answer.length === 4) {
                     workingAnswer = [];
@@ -259,7 +271,7 @@ $(document).ready(function () {
                     possibleGuesses.push(workingAnswer);
                     answer.pop();
                 } else {
-                    getCombinations(possibleGuesses, answer);
+                    getCombinations(possibleGuesses, answer, allowDuplicates);
                 }
             }
         }
@@ -271,22 +283,54 @@ $(document).ready(function () {
         guessCount++;
 
         // analyze submitted answer and determine results.
-        for (var i = 0; i < answer.length; i++) {
+        //for (var i = 0; i < answer.length; i++) {
+        //    var resultcode = 0;
+        //    for (var j = 0; j < guess.length; j++) {
+        //        if (answer[i] == guess[j]) {
+        //            if (i == j) {
+        //                // position and color match found. 						
+        //                resultcode = Math.max(2, resultcode);
+        //            }
+        //            else {
+        //                // color correct, but position is not
+        //                resultcode = Math.max(1, resultcode);
+        //            }
+        //        }
+        //    }
+        //    results.push(resultcode);
+        //}
+
+        var answersUsed = [];
+
+        for (var i = 0; i < guess.length; i++) {
             var resultcode = 0;
-            for (var j = 0; j < guess.length; j++) {
-                if (answer[i] == guess[j]) {
-                    if (i == j) {
-                        // position and color match found. 						
-                        resultcode = Math.max(2, resultcode);
-                    }
-                    else {
-                        // color correct, but position is not
-                        resultcode = Math.max(1, resultcode);
+            var answerUsed = -1;
+            for (var j = 0; j < answer.length; j++) {
+                if (answersUsed.indexOf(j) === -1) {
+                    if (answer[i] == guess[j]) {
+                        if (i == j) {
+                            // position and color match found. 	
+                            if (resultcode < 2) {
+                                resultcode = 2;
+                                answerUsed = j;
+                                break;
+                            }
+                        }
+                        else {
+                            if (resultcode < 1) {
+                                // color correct, but position is not
+                                resultcode = 1;
+                                answerUsed = j;
+                            }
+                        }
                     }
                 }
             }
             results.push(resultcode);
-        }
+            if (resultcode > 0) {
+                answersUsed.push(answerUsed);
+            }
+        }        
 
         // organize the position/color matches first, then the color matches
         results.sort();
@@ -352,5 +396,7 @@ $(document).ready(function () {
     $('input[name=gameMode]:radio').change(function () {
         initializeGame();
     });
+
+    $('.duplicateSetting').hide();
 
 });
